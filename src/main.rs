@@ -1,7 +1,7 @@
 use anyhow::Result;
-use bevy::prelude::*;
+use bevy::prelude::{App, Camera2dBundle, Color, Commands, DefaultPlugins, Transform, Vec2};
 use bevy_pancam::{PanCam, PanCamPlugin};
-use bevy_prototype_lyon::prelude::*;
+use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder, ShapePlugin};
 use geo::{
     BoundingRect, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point, Polygon,
 };
@@ -17,9 +17,6 @@ fn main() -> Result<()> {
 
     Ok(())
 }
-
-#[derive(Component)]
-struct Buildings;
 
 fn setup(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), PanCam::default()));
