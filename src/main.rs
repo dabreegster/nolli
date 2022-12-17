@@ -1,13 +1,48 @@
 use anyhow::Result;
+use bevy::prelude::*;
+use bevy_pancam::{PanCam, PanCamPlugin};
+use bevy_prototype_lyon::prelude::*;
 use geo::{
     BoundingRect, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point, Polygon,
 };
 use geojson::GeoJson;
 
 fn main() -> Result<()> {
-    let buildings = load_buildings("/home/dabreegster/Downloads/export.geojson")?;
-    println!("{} buildings", buildings.len());
+    App::new()
+        .add_plugins(DefaultPlugins)
+        .add_plugin(PanCamPlugin::default())
+        .add_plugin(ShapePlugin)
+        .add_startup_system(setup)
+        .run();
+
     Ok(())
+}
+
+#[derive(Component)]
+struct Buildings;
+
+fn setup(mut commands: Commands) {
+    commands.spawn((Camera2dBundle::default(), PanCam::default()));
+
+    let buildings = load_buildings("/home/dabreegster/Downloads/export.geojson").unwrap();
+
+    let mut builder = GeometryBuilder::new();
+    for geo_polygon in buildings {
+        let bevy_polygon = bevy_prototype_lyon::shapes::Polygon {
+            points: geo_polygon
+                .exterior()
+                .coords()
+                .map(|pt| Vec2::new(pt.x as f32, pt.y as f32))
+                .collect(),
+            closed: true,
+        };
+        builder = builder.add(&bevy_polygon);
+    }
+
+    commands.spawn(builder.build(
+        DrawMode::Fill(FillMode::color(Color::CYAN)),
+        Transform::default(),
+    ));
 }
 
 /// Load polygons from a GeoJSON file and transform to Mercator
