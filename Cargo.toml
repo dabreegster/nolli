@@ -1,0 +1,9 @@
+[package]
+name = "nolli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.66"
+geo = "0.23.1"
+geojson = { version = "*", features = ["geo-types"] }
