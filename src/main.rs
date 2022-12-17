@@ -3,7 +3,8 @@ use bevy::prelude::{App, Camera2dBundle, Color, Commands, DefaultPlugins, Transf
 use bevy_pancam::{PanCam, PanCamPlugin};
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder, ShapePlugin};
 use geo::{
-    BoundingRect, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point, Polygon,
+    BoundingRect, Contains, Coord, Geometry, GeometryCollection, HaversineDistance,
+    MapCoordsInPlace, Point, Polygon, Rect,
 };
 use geojson::GeoJson;
 
@@ -21,16 +22,14 @@ fn main() -> Result<()> {
 fn setup(mut commands: Commands) {
     commands.spawn((Camera2dBundle::default(), PanCam::default()));
 
-    let buildings = load_buildings("/home/dabreegster/Downloads/export.geojson").unwrap();
+    let (buildings, bbox) = load_buildings("/home/dabreegster/Downloads/export.geojson").unwrap();
+    let grid = Grid::from_polygons(&buildings, bbox);
+    commands.spawn(grid.render_unfilled());
 
     let mut builder = GeometryBuilder::new();
     for geo_polygon in buildings {
         let bevy_polygon = bevy_prototype_lyon::shapes::Polygon {
-            points: geo_polygon
-                .exterior()
-                .coords()
-                .map(|pt| Vec2::new(pt.x as f32, pt.y as f32))
-                .collect(),
+            points: geo_polygon.exterior().coords().map(coord_to_vec2).collect(),
             closed: true,
         };
         builder = builder.add(&bevy_polygon);
@@ -43,7 +42,7 @@ fn setup(mut commands: Commands) {
 }
 
 /// Load polygons from a GeoJSON file and transform to Mercator
-fn load_buildings(path: &str) -> Result<Vec<Polygon>> {
+fn load_buildings(path: &str) -> Result<(Vec<Polygon>, Rect)> {
     let geojson = std::fs::read_to_string(path)?.parse::<GeoJson>()?;
     let mut collection: GeometryCollection<f64> = geojson::quick_collection(&geojson)?;
     let top_left: Point = collection.bounding_rect().unwrap().min().into();
@@ -53,6 +52,7 @@ fn load_buildings(path: &str) -> Result<Vec<Polygon>> {
         let y = Point::new(top_left.x(), c.y).haversine_distance(&top_left);
         (x, y).into()
     });
+    let bbox = collection.bounding_rect().unwrap();
 
     let mut polygons = Vec::new();
     for geom in collection {
@@ -60,5 +60,74 @@ fn load_buildings(path: &str) -> Result<Vec<Polygon>> {
             polygons.push(polygon);
         }
     }
-    Ok(polygons)
+    Ok((polygons, bbox))
+}
+
+struct Grid {
+    // Keep in mind this is row-major, (y, x)
+    inner: grid::Grid<bool>,
+    resolution_meters: f64,
+}
+
+impl Grid {
+    fn center_of_cell(&self, x: usize, y: usize) -> Point {
+        Point::new(
+            1.5 * (x as f64) * self.resolution_meters,
+            1.5 * (y as f64) * self.resolution_meters,
+        )
+    }
+
+    fn from_polygons(polygons: &[Polygon], bbox: Rect) -> Self {
+        let resolution_meters = 10.0;
+        let mut grid = Self {
+            inner: grid::Grid::new(
+                (bbox.width() / resolution_meters).ceil() as usize,
+                (bbox.height() / resolution_meters).ceil() as usize,
+            ),
+            resolution_meters,
+        };
+
+        // TODO This is the brute-force way to do this. Fill out the grid for each polygon instead.
+        for y in 0..grid.inner.rows() {
+            for x in 0..grid.inner.cols() {
+                let pt = grid.center_of_cell(x, y);
+                if polygons.iter().any(|polygon| polygon.contains(&pt)) {
+                    grid.inner[y][x] = true;
+                }
+            }
+        }
+
+        grid
+    }
+
+    fn render_unfilled(&self) -> bevy_prototype_lyon::entity::ShapeBundle {
+        let mut builder = GeometryBuilder::new();
+        for y in 0..self.inner.rows() {
+            for x in 0..self.inner.cols() {
+                if !self.inner[y][x] {
+                    builder = builder.add(&bevy_prototype_lyon::shapes::Rectangle {
+                        extents: Vec2::new(
+                            self.resolution_meters as f32,
+                            self.resolution_meters as f32,
+                        ),
+                        origin: bevy_prototype_lyon::shapes::RectangleOrigin::CustomCenter(
+                            pt_to_vec2(self.center_of_cell(x, y)),
+                        ),
+                    });
+                }
+            }
+        }
+
+        builder.build(
+            DrawMode::Fill(FillMode::color(Color::RED)),
+            Transform::default(),
+        )
+    }
+}
+
+fn pt_to_vec2(pt: Point) -> Vec2 {
+    Vec2::new(pt.x() as f32, pt.y() as f32)
+}
+fn coord_to_vec2(pt: &Coord) -> Vec2 {
+    Vec2::new(pt.x as f32, pt.y as f32)
 }

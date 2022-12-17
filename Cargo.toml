@@ -10,3 +10,4 @@ bevy_pancam = "0.7.0"
 bevy_prototype_lyon = "0.7.2"
 geo = "0.23.1"
 geojson = { version = "*", features = ["geo-types"] }
+grid = "0.9.0"
