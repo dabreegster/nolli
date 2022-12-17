@@ -45,6 +45,12 @@ fn setup(mut commands: Commands) {
 fn load_buildings(path: &str) -> Result<(Vec<Polygon>, Rect)> {
     let geojson = std::fs::read_to_string(path)?.parse::<GeoJson>()?;
     let mut collection: GeometryCollection<f64> = geojson::quick_collection(&geojson)?;
+
+    // Filter out non-polygons
+    collection
+        .0
+        .retain(|geom| matches!(geom, Geometry::Polygon(_)));
+
     let top_left: Point = collection.bounding_rect().unwrap().min().into();
 
     collection.map_coords_in_place(|c| {
@@ -72,8 +78,8 @@ struct Grid {
 impl Grid {
     fn center_of_cell(&self, x: usize, y: usize) -> Point {
         Point::new(
-            1.5 * (x as f64) * self.resolution_meters,
-            1.5 * (y as f64) * self.resolution_meters,
+            (0.5 + (x as f64)) * self.resolution_meters,
+            (0.5 + (y as f64)) * self.resolution_meters,
         )
     }
 
@@ -81,8 +87,8 @@ impl Grid {
         let resolution_meters = 10.0;
         let mut grid = Self {
             inner: grid::Grid::new(
-                (bbox.width() / resolution_meters).ceil() as usize,
                 (bbox.height() / resolution_meters).ceil() as usize,
+                (bbox.width() / resolution_meters).ceil() as usize,
             ),
             resolution_meters,
         };
