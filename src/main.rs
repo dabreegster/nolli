@@ -1,7 +1,9 @@
 use anyhow::Result;
 use bevy::prelude::{App, Camera2dBundle, Color, Commands, DefaultPlugins, Transform, Vec2};
 use bevy_pancam::{PanCam, PanCamPlugin};
+use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder, ShapePlugin};
+use bevy_prototype_lyon::shapes;
 use geo::{
     BoundingRect, Contains, Coord, Geometry, GeometryCollection, HaversineDistance,
     MapCoordsInPlace, Point, Polygon, Rect,
@@ -24,21 +26,24 @@ fn setup(mut commands: Commands) {
 
     let (buildings, bbox) = load_buildings("/home/dabreegster/Downloads/export.geojson").unwrap();
     let grid = Grid::from_polygons(&buildings, bbox);
-    commands.spawn(grid.render_unfilled());
 
+    commands.spawn(grid.render_unfilled());
+    commands.spawn(render_polygons(buildings));
+}
+
+fn render_polygons(polygons: Vec<Polygon>) -> ShapeBundle {
     let mut builder = GeometryBuilder::new();
-    for geo_polygon in buildings {
-        let bevy_polygon = bevy_prototype_lyon::shapes::Polygon {
+    for geo_polygon in polygons {
+        let bevy_polygon = shapes::Polygon {
             points: geo_polygon.exterior().coords().map(coord_to_vec2).collect(),
             closed: true,
         };
         builder = builder.add(&bevy_polygon);
     }
-
-    commands.spawn(builder.build(
+    builder.build(
         DrawMode::Fill(FillMode::color(Color::CYAN)),
         Transform::default(),
-    ));
+    )
 }
 
 /// Load polygons from a GeoJSON file and transform to Mercator
@@ -106,19 +111,19 @@ impl Grid {
         grid
     }
 
-    fn render_unfilled(&self) -> bevy_prototype_lyon::entity::ShapeBundle {
+    fn render_unfilled(&self) -> ShapeBundle {
         let mut builder = GeometryBuilder::new();
         for y in 0..self.inner.rows() {
             for x in 0..self.inner.cols() {
                 if !self.inner[y][x] {
-                    builder = builder.add(&bevy_prototype_lyon::shapes::Rectangle {
+                    builder = builder.add(&shapes::Rectangle {
                         extents: Vec2::new(
                             self.resolution_meters as f32,
                             self.resolution_meters as f32,
                         ),
-                        origin: bevy_prototype_lyon::shapes::RectangleOrigin::CustomCenter(
-                            pt_to_vec2(self.center_of_cell(x, y)),
-                        ),
+                        origin: shapes::RectangleOrigin::CustomCenter(pt_to_vec2(
+                            self.center_of_cell(x, y),
+                        )),
                     });
                 }
             }
