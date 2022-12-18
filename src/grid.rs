@@ -108,9 +108,7 @@ impl Grid {
         Some((x, y))
     }
 
-    // Caller should render_unfilled after this
     pub fn start_flood(&mut self, x: usize, y: usize) {
-        self.flood_frontier.clear();
         self.flood_frontier.push((x, y));
     }
 
