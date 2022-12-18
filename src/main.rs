@@ -1,5 +1,7 @@
 use anyhow::Result;
-use bevy::prelude::{App, Camera2dBundle, Color, Commands, DefaultPlugins, Transform, Vec2};
+use bevy::prelude::{
+    App, Camera2dBundle, Color, Commands, DefaultPlugins, Input, KeyCode, Res, Transform, Vec2,
+};
 use bevy_pancam::{PanCam, PanCamPlugin};
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder, ShapePlugin};
@@ -10,12 +12,19 @@ use geo::{
 };
 use geojson::GeoJson;
 
+use self::cursor_worldspace::CursorWorldspace;
+
+mod cursor_worldspace;
+
 fn main() -> Result<()> {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(PanCamPlugin::default())
         .add_plugin(ShapePlugin)
         .add_startup_system(setup)
+        .add_system(controls)
+        .init_resource::<CursorWorldspace>()
+        .add_system(cursor_worldspace::cursor_to_world)
         .run();
 
     Ok(())
@@ -29,6 +38,12 @@ fn setup(mut commands: Commands) {
 
     commands.spawn(grid.render_unfilled());
     commands.spawn(render_polygons(buildings));
+}
+
+fn controls(keys: Res<Input<KeyCode>>, cursor: Res<CursorWorldspace>) {
+    if keys.just_pressed(KeyCode::Space) {
+        println!("Space! At {:?}", cursor.0);
+    }
 }
 
 fn render_polygons(polygons: Vec<Polygon>) -> ShapeBundle {
