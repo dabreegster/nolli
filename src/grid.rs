@@ -11,6 +11,7 @@ pub struct Grid {
     resolution_meters: f64,
     // TODO Switch to https://github.com/StarArawn/bevy_ecs_tilemap, or just render as one big
     // image/texture bitmap?
+    flood_frontier: Vec<(usize, usize)>,
 }
 
 impl Grid {
@@ -29,6 +30,7 @@ impl Grid {
                 (bbox.width() / resolution_meters).ceil() as usize,
             ),
             resolution_meters,
+            flood_frontier: Vec::new(),
         };
 
         // TODO This is the brute-force way to do this. Fill out the grid for each polygon instead.
@@ -81,8 +83,38 @@ impl Grid {
     }
 
     // Caller should render_unfilled after this
-    pub fn toggle(&mut self, x: usize, y: usize) {
-        self.inner[y][x] = !self.inner[y][x];
+    pub fn start_flood(&mut self, x: usize, y: usize) {
+        self.flood_frontier = vec![(x, y)];
+    }
+
+    pub fn flood(&mut self) {
+        println!("Flooding {} values", self.flood_frontier.len());
+        let mut next = Vec::new();
+        for (x, y) in &self.flood_frontier {
+            self.inner[*y][*x] = true;
+        }
+        for (x, y) in self.flood_frontier.drain(..) {
+            let x = x as isize;
+            let y = y as isize;
+
+            for x in (x - 1)..=(x + 1) {
+                for y in (y - 1)..=(y + 1) {
+                    if x < 0 || y < 0 {
+                        continue;
+                    }
+                    let x = x as usize;
+                    let y = y as usize;
+                    if x == self.inner.cols() || y == self.inner.rows() {
+                        continue;
+                    }
+                    if !self.inner[y][x] {
+                        // TODO Duplicates
+                        next.push((x, y));
+                    }
+                }
+            }
+        }
+        self.flood_frontier = next;
     }
 }
 

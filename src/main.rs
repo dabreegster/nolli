@@ -1,8 +1,9 @@
 use anyhow::Result;
 use bevy::prelude::{
     App, Camera2dBundle, Commands, Component, DefaultPlugins, Entity, Input, KeyCode, Query, Res,
-    With,
+    SystemSet, With,
 };
+use bevy::time::FixedTimestep;
 use bevy_pancam::{PanCam, PanCamPlugin};
 use bevy_prototype_lyon::prelude::ShapePlugin;
 
@@ -20,6 +21,11 @@ fn main() -> Result<()> {
         .add_plugin(ShapePlugin)
         .add_startup_system(setup)
         .add_system(controls)
+        .add_system_set(
+            SystemSet::new()
+                .with_run_criteria(FixedTimestep::step(1.0))
+                .with_system(do_flood),
+        )
         .init_resource::<CursorWorldspace>()
         .add_system(cursor_worldspace::cursor_to_world)
         .run();
@@ -43,24 +49,27 @@ fn setup(mut commands: Commands) {
     commands.spawn(load_geo::render_polygons(buildings));
 }
 
-fn controls(
-    keys: Res<Input<KeyCode>>,
-    cursor: Res<CursorWorldspace>,
+fn controls(keys: Res<Input<KeyCode>>, cursor: Res<CursorWorldspace>, mut query: Query<&mut Grid>) {
+    if keys.just_pressed(KeyCode::Space) {
+        let mut grid = query.single_mut();
+        if let Some(pt) = cursor.0 {
+            if let Some((x, y)) = grid.world_to_cell(pt) {
+                println!("Starting flood from {x}, {y}");
+                grid.start_flood(x, y);
+            }
+        }
+    }
+}
+
+fn do_flood(
     mut query1: Query<&mut Grid>,
     query2: Query<Entity, With<RenderGrid>>,
     mut commands: Commands,
 ) {
-    if keys.just_pressed(KeyCode::Space) {
-        let mut grid = query1.single_mut();
-        if let Some(pt) = cursor.0 {
-            if let Some((x, y)) = grid.world_to_cell(pt) {
-                println!("so long, {x} {y}");
-                grid.toggle(x, y);
+    let mut grid = query1.single_mut();
+    grid.flood();
 
-                // TODO This is definitely not the way to re-render
-                commands.entity(query2.single()).despawn();
-                commands.spawn((grid.render_unfilled(), RenderGrid));
-            }
-        }
-    }
+    // TODO This is definitely not the way to re-render
+    commands.entity(query2.single()).despawn();
+    commands.spawn((grid.render_unfilled(), RenderGrid));
 }
