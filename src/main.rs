@@ -44,7 +44,9 @@ fn setup(mut commands: Commands) {
         load_geo::load_buildings("/home/dabreegster/Downloads/export.geojson").unwrap();
     let grid = Grid::from_polygons(&buildings, bbox);
 
-    commands.spawn((grid.render_unfilled(), RenderGrid));
+    for bundle in grid.render() {
+        commands.spawn((bundle, RenderGrid));
+    }
     commands.spawn(grid);
     commands.spawn(load_geo::render_polygons(buildings));
 }
@@ -70,6 +72,10 @@ fn do_flood(
     grid.flood();
 
     // TODO This is definitely not the way to re-render
-    commands.entity(query2.single()).despawn();
-    commands.spawn((grid.render_unfilled(), RenderGrid));
+    for entity in &query2 {
+        commands.entity(entity).despawn();
+    }
+    for bundle in grid.render() {
+        commands.spawn((bundle, RenderGrid));
+    }
 }

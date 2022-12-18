@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use bevy::prelude::{Color, Component, Transform, Vec2};
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder};
@@ -9,11 +7,19 @@ use geo::{Contains, Point, Polygon, Rect};
 #[derive(Component)]
 pub struct Grid {
     // Keep in mind this is row-major, (y, x)
-    inner: grid::Grid<bool>,
+    inner: grid::Grid<Cell>,
     resolution_meters: f64,
     // TODO Switch to https://github.com/StarArawn/bevy_ecs_tilemap, or just render as one big
     // image/texture bitmap?
-    flood_frontier: HashSet<(usize, usize)>,
+    flood_frontier: Vec<(usize, usize)>,
+}
+
+#[derive(Clone, PartialEq)]
+enum Cell {
+    Empty,
+    Building,
+    Frontier,
+    Flooded,
 }
 
 impl Grid {
@@ -27,12 +33,13 @@ impl Grid {
     pub fn from_polygons(polygons: &[Polygon], bbox: Rect) -> Self {
         let resolution_meters = 10.0;
         let mut grid = Self {
-            inner: grid::Grid::new(
+            inner: grid::Grid::init(
                 (bbox.height() / resolution_meters).ceil() as usize,
                 (bbox.width() / resolution_meters).ceil() as usize,
+                Cell::Empty,
             ),
             resolution_meters,
-            flood_frontier: HashSet::new(),
+            flood_frontier: Vec::new(),
         };
 
         // TODO This is the brute-force way to do this. Fill out the grid for each polygon instead.
@@ -40,7 +47,7 @@ impl Grid {
             for x in 0..grid.inner.cols() {
                 let pt = grid.center_of_cell(x, y);
                 if polygons.iter().any(|polygon| polygon.contains(&pt)) {
-                    grid.inner[y][x] = true;
+                    grid.inner[y][x] = Cell::Building;
                 }
             }
         }
@@ -48,28 +55,44 @@ impl Grid {
         grid
     }
 
-    pub fn render_unfilled(&self) -> ShapeBundle {
-        let mut builder = GeometryBuilder::new();
+    pub fn render(&self) -> Vec<ShapeBundle> {
+        // A bundle for each color is pretty awkward
+        let mut frontier_builder = GeometryBuilder::new();
+        let mut flooded_builder = GeometryBuilder::new();
+
         for y in 0..self.inner.rows() {
             for x in 0..self.inner.cols() {
-                if !self.inner[y][x] {
-                    builder = builder.add(&shapes::Rectangle {
-                        extents: Vec2::new(
-                            self.resolution_meters as f32,
-                            self.resolution_meters as f32,
-                        ),
-                        origin: shapes::RectangleOrigin::CustomCenter(pt_to_vec2(
-                            self.center_of_cell(x, y),
-                        )),
-                    });
+                if !matches!(self.inner[y][x], Cell::Flooded | Cell::Frontier) {
+                    continue;
+                }
+                let shape = shapes::Rectangle {
+                    extents: Vec2::new(
+                        self.resolution_meters as f32,
+                        self.resolution_meters as f32,
+                    ),
+                    origin: shapes::RectangleOrigin::CustomCenter(pt_to_vec2(
+                        self.center_of_cell(x, y),
+                    )),
+                };
+
+                if self.inner[y][x] == Cell::Flooded {
+                    flooded_builder = flooded_builder.add(&shape);
+                } else {
+                    frontier_builder = frontier_builder.add(&shape);
                 }
             }
         }
 
-        builder.build(
-            DrawMode::Fill(FillMode::color(Color::RED)),
-            Transform::default(),
-        )
+        vec![
+            flooded_builder.build(
+                DrawMode::Fill(FillMode::color(Color::RED)),
+                Transform::default(),
+            ),
+            frontier_builder.build(
+                DrawMode::Fill(FillMode::color(Color::GREEN)),
+                Transform::default(),
+            ),
+        ]
     }
 
     pub fn world_to_cell(&self, world_pt: Vec2) -> Option<(usize, usize)> {
@@ -87,16 +110,15 @@ impl Grid {
     // Caller should render_unfilled after this
     pub fn start_flood(&mut self, x: usize, y: usize) {
         self.flood_frontier.clear();
-        self.flood_frontier.insert((x, y));
+        self.flood_frontier.push((x, y));
     }
 
     pub fn flood(&mut self) {
-        println!("Flooding {} values", self.flood_frontier.len());
-        let mut next = HashSet::new();
+        let mut next = Vec::new();
         for (x, y) in &self.flood_frontier {
-            self.inner[*y][*x] = true;
+            self.inner[*y][*x] = Cell::Flooded;
         }
-        for (x, y) in std::mem::take(&mut self.flood_frontier) {
+        for (x, y) in self.flood_frontier.drain(..) {
             let x = x as isize;
             let y = y as isize;
 
@@ -110,8 +132,9 @@ impl Grid {
                     if x == self.inner.cols() || y == self.inner.rows() {
                         continue;
                     }
-                    if !self.inner[y][x] {
-                        next.insert((x, y));
+                    if self.inner[y][x] == Cell::Empty {
+                        self.inner[y][x] = Cell::Frontier;
+                        next.push((x, y));
                     }
                 }
             }
