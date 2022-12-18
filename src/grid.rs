@@ -1,13 +1,16 @@
-use bevy::prelude::{Color, Transform, Vec2};
+use bevy::prelude::{Color, Component, Transform, Vec2};
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder};
 use bevy_prototype_lyon::shapes;
 use geo::{Contains, Point, Polygon, Rect};
 
+#[derive(Component)]
 pub struct Grid {
     // Keep in mind this is row-major, (y, x)
     inner: grid::Grid<bool>,
     resolution_meters: f64,
+    // TODO Switch to https://github.com/StarArawn/bevy_ecs_tilemap, or just render as one big
+    // image/texture bitmap?
 }
 
 impl Grid {
@@ -63,6 +66,23 @@ impl Grid {
             DrawMode::Fill(FillMode::color(Color::RED)),
             Transform::default(),
         )
+    }
+
+    pub fn world_to_cell(&self, world_pt: Vec2) -> Option<(usize, usize)> {
+        if world_pt.x < 0.0 || world_pt.y < 0.0 {
+            return None;
+        }
+        let x = (world_pt.x as f64 / self.resolution_meters).floor() as usize;
+        let y = (world_pt.y as f64 / self.resolution_meters).floor() as usize;
+        if x >= self.inner.cols() || y >= self.inner.rows() {
+            return None;
+        }
+        Some((x, y))
+    }
+
+    // Caller should render_unfilled after this
+    pub fn toggle(&mut self, x: usize, y: usize) {
+        self.inner[y][x] = !self.inner[y][x];
     }
 }
 
