@@ -9,8 +9,6 @@ pub struct Grid {
     // Keep in mind this is row-major, (y, x)
     inner: grid::Grid<Cell>,
     resolution_meters: f64,
-    // TODO Switch to https://github.com/StarArawn/bevy_ecs_tilemap, or just render as one big
-    // image/texture bitmap?
     flood_frontier: Vec<(usize, usize)>,
 }
 
@@ -23,13 +21,6 @@ enum Cell {
 }
 
 impl Grid {
-    fn center_of_cell(&self, x: usize, y: usize) -> Point {
-        Point::new(
-            (0.5 + (x as f64)) * self.resolution_meters,
-            (0.5 + (y as f64)) * self.resolution_meters,
-        )
-    }
-
     pub fn from_polygons(polygons: &[Polygon], bbox: Rect) -> Self {
         let resolution_meters = 10.0;
         let mut grid = Self {
@@ -42,7 +33,8 @@ impl Grid {
             flood_frontier: Vec::new(),
         };
 
-        // TODO This is the brute-force way to do this. Fill out the grid for each polygon instead.
+        // TODO This is brute-force. Loop over each polygon, find the grid bbox, and fill out the
+        // larger grid.
         for y in 0..grid.inner.rows() {
             for x in 0..grid.inner.cols() {
                 let pt = grid.center_of_cell(x, y);
@@ -55,6 +47,8 @@ impl Grid {
         grid
     }
 
+    // TODO Switch to https://github.com/StarArawn/bevy_ecs_tilemap, or just render as one big
+    // image/texture bitmap?
     pub fn render(&self) -> Vec<ShapeBundle> {
         // A bundle for each color is pretty awkward
         let mut frontier_builder = GeometryBuilder::new();
@@ -94,6 +88,13 @@ impl Grid {
                 Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
             ),
         ]
+    }
+
+    fn center_of_cell(&self, x: usize, y: usize) -> Point {
+        Point::new(
+            (0.5 + (x as f64)) * self.resolution_meters,
+            (0.5 + (y as f64)) * self.resolution_meters,
+        )
     }
 
     pub fn world_to_cell(&self, world_pt: Vec2) -> Option<(usize, usize)> {

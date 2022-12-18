@@ -1,7 +1,7 @@
 use anyhow::Result;
 use bevy::prelude::{
     App, Camera2dBundle, Commands, Component, DefaultPlugins, Entity, Input, KeyCode, Query, Res,
-    SystemSet, With,
+    Resource, SystemSet, With,
 };
 use bevy::time::FixedTimestep;
 use bevy_pancam::{PanCam, PanCamPlugin};
@@ -14,11 +14,20 @@ mod cursor_worldspace;
 mod grid;
 mod load_geo;
 
+#[derive(Resource)]
+struct InputPath(String);
+
 fn main() -> Result<()> {
+    let mut args: Vec<String> = std::env::args().collect();
+    if args.len() != 2 {
+        panic!("Pass a path to a .geojson containing some polygons");
+    }
+
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(PanCamPlugin::default())
         .add_plugin(ShapePlugin)
+        .insert_resource(InputPath(args.pop().unwrap()))
         .add_startup_system(setup)
         .add_system(controls)
         .add_system_set(
@@ -33,15 +42,14 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-// Just taggging the ShapeBundle to change it later
+// Just taggging the ShapeBundles to change them later
 #[derive(Component)]
 struct RenderGrid;
 
-fn setup(mut commands: Commands) {
+fn setup(mut commands: Commands, path: Res<InputPath>) {
     commands.spawn((Camera2dBundle::default(), PanCam::default()));
 
-    let (buildings, bbox) =
-        load_geo::load_buildings("/home/dabreegster/Downloads/export.geojson").unwrap();
+    let (buildings, bbox) = load_geo::load_buildings(&path.0).unwrap();
     let grid = Grid::from_polygons(&buildings, bbox);
 
     for bundle in grid.render() {
