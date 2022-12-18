@@ -4,9 +4,7 @@ This is an experiment for me to try [Bevy](https://bevyengine.org) and play
 with figure-ground maps, inspired by [Giambattista
 Nolli](https://web.stanford.edu/group/spatialhistory/nolli/).
 
-<video controls>
-  <source src="demo.mp4" type="video/mp4">
-</video>
+![](demo.mp4)
 
 To try this:
 
