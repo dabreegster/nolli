@@ -5,6 +5,7 @@ with figure-ground maps, inspired by [Giambattista
 Nolli](https://web.stanford.edu/group/spatialhistory/nolli/).
 
 ![Demo](demo.gif)
+(City of London buildings from OpenStreetMap)
 
 To try this:
 
