@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use bevy::prelude::{Color, Component, Transform, Vec2};
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder};
@@ -11,7 +13,7 @@ pub struct Grid {
     resolution_meters: f64,
     // TODO Switch to https://github.com/StarArawn/bevy_ecs_tilemap, or just render as one big
     // image/texture bitmap?
-    flood_frontier: Vec<(usize, usize)>,
+    flood_frontier: HashSet<(usize, usize)>,
 }
 
 impl Grid {
@@ -30,7 +32,7 @@ impl Grid {
                 (bbox.width() / resolution_meters).ceil() as usize,
             ),
             resolution_meters,
-            flood_frontier: Vec::new(),
+            flood_frontier: HashSet::new(),
         };
 
         // TODO This is the brute-force way to do this. Fill out the grid for each polygon instead.
@@ -84,16 +86,17 @@ impl Grid {
 
     // Caller should render_unfilled after this
     pub fn start_flood(&mut self, x: usize, y: usize) {
-        self.flood_frontier = vec![(x, y)];
+        self.flood_frontier.clear();
+        self.flood_frontier.insert((x, y));
     }
 
     pub fn flood(&mut self) {
         println!("Flooding {} values", self.flood_frontier.len());
-        let mut next = Vec::new();
+        let mut next = HashSet::new();
         for (x, y) in &self.flood_frontier {
             self.inner[*y][*x] = true;
         }
-        for (x, y) in self.flood_frontier.drain(..) {
+        for (x, y) in std::mem::take(&mut self.flood_frontier) {
             let x = x as isize;
             let y = y as isize;
 
@@ -108,8 +111,7 @@ impl Grid {
                         continue;
                     }
                     if !self.inner[y][x] {
-                        // TODO Duplicates
-                        next.push((x, y));
+                        next.insert((x, y));
                     }
                 }
             }
