@@ -1,4 +1,4 @@
-use bevy::prelude::{Color, Component, Transform, Vec2};
+use bevy::prelude::{Color, Component, Transform, Vec2, Vec3};
 use bevy_prototype_lyon::entity::ShapeBundle;
 use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder};
 use bevy_prototype_lyon::shapes;
@@ -83,14 +83,15 @@ impl Grid {
             }
         }
 
+        // Draw with a higher z-order than the buildings to prevent flicker
         vec![
             flooded_builder.build(
                 DrawMode::Fill(FillMode::color(Color::RED)),
-                Transform::default(),
+                Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
             ),
             frontier_builder.build(
                 DrawMode::Fill(FillMode::color(Color::GREEN)),
-                Transform::default(),
+                Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
             ),
         ]
     }
