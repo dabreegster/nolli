@@ -47,7 +47,7 @@ pub fn render_polygons(polygons: Vec<Polygon>) -> ShapeBundle {
         builder = builder.add(&bevy_polygon);
     }
     builder.build(
-        DrawMode::Fill(FillMode::color(Color::CYAN)),
+        DrawMode::Fill(FillMode::color(Color::hex("601865").unwrap())),
         Transform::default(),
     )
 }

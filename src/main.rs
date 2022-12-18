@@ -23,7 +23,7 @@ fn main() -> Result<()> {
         .add_system(controls)
         .add_system_set(
             SystemSet::new()
-                .with_run_criteria(FixedTimestep::step(1.0))
+                .with_run_criteria(FixedTimestep::step(0.1))
                 .with_system(do_flood),
         )
         .init_resource::<CursorWorldspace>()

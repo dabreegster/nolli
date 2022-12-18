@@ -86,11 +86,11 @@ impl Grid {
         // Draw with a higher z-order than the buildings to prevent flicker
         vec![
             flooded_builder.build(
-                DrawMode::Fill(FillMode::color(Color::RED)),
+                DrawMode::Fill(FillMode::color(Color::hex("0F7BDB").unwrap())),
                 Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
             ),
             frontier_builder.build(
-                DrawMode::Fill(FillMode::color(Color::GREEN)),
+                DrawMode::Fill(FillMode::color(Color::hex("42FEFE").unwrap())),
                 Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
             ),
         ]
