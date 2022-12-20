@@ -6,6 +6,7 @@ use bevy::prelude::{
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy::time::FixedTimestep;
 use bevy_pancam::{PanCam, PanCamPlugin};
+use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_prototype_lyon::prelude::ShapePlugin;
 
 use self::cursor_worldspace::CursorWorldspace;
@@ -20,6 +21,7 @@ fn main() -> Result<()> {
         .add_plugins(DefaultPlugins)
         .add_plugin(PanCamPlugin::default())
         .add_plugin(ShapePlugin)
+        .add_plugin(WorldInspectorPlugin::new())
         .add_startup_system(setup)
         .add_system(controls)
         .add_system_set(
