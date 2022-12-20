@@ -4,7 +4,7 @@ use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder};
 use bevy_prototype_lyon::shapes;
 use geo::{Contains, Point, Polygon, Rect};
 
-#[derive(Component)]
+#[derive(Clone, Component)]
 pub struct Grid {
     // Keep in mind this is row-major, (y, x)
     inner: grid::Grid<Cell>,

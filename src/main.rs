@@ -1,7 +1,8 @@
 use anyhow::Result;
 use bevy::prelude::{
     default, App, Assets, Camera2dBundle, Color, ColorMaterial, Commands, Component,
-    DefaultPlugins, Entity, Input, KeyCode, Mesh, Query, Res, ResMut, Resource, SystemSet, With,
+    DefaultPlugins, Entity, Input, KeyCode, Mesh, ParamSet, Query, Res, ResMut, Resource,
+    SystemSet, With,
 };
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy::time::FixedTimestep;
@@ -24,7 +25,7 @@ fn main() -> Result<()> {
         .add_plugin(ShapePlugin)
         .add_plugin(WorldInspectorPlugin::new())
         .add_startup_system(setup)
-        .add_system(controls)
+        .add_system(key_controls)
         .add_system_set(
             SystemSet::new()
                 .with_run_criteria(FixedTimestep::step(0.1))
@@ -39,9 +40,17 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+// TODO These are all singletons. Should they just be a Resource?
+
 // Just taggging the ShapeBundles to change them later
 #[derive(Component)]
 struct RenderGrid;
+
+#[derive(Component)]
+struct ActiveGrid;
+
+#[derive(Component)]
+struct OriginalGrid;
 
 fn setup(
     mut commands: Commands,
@@ -60,7 +69,8 @@ fn setup(
     for bundle in grid.render() {
         commands.spawn((bundle, RenderGrid));
     }
-    commands.spawn(grid);
+    commands.spawn((grid.clone(), ActiveGrid));
+    commands.spawn((grid, OriginalGrid));
     commands.spawn(MaterialMesh2dBundle {
         mesh: meshes.add(load_geo::polygons_to_mesh(buildings)).into(),
         material: materials
@@ -71,7 +81,11 @@ fn setup(
     commands.spawn((Camera2dBundle::default(), PanCam::default()));
 }
 
-fn controls(keys: Res<Input<KeyCode>>, cursor: Res<CursorWorldspace>, mut query: Query<&mut Grid>) {
+fn key_controls(
+    keys: Res<Input<KeyCode>>,
+    cursor: Res<CursorWorldspace>,
+    mut query: Query<&mut Grid, With<ActiveGrid>>,
+) {
     if keys.just_pressed(KeyCode::Space) {
         let mut grid = query.single_mut();
         if let Some(pt) = cursor.0 {
@@ -84,7 +98,7 @@ fn controls(keys: Res<Input<KeyCode>>, cursor: Res<CursorWorldspace>, mut query:
 }
 
 fn do_flood(
-    mut query1: Query<&mut Grid>,
+    mut query1: Query<&mut Grid, With<ActiveGrid>>,
     query2: Query<Entity, With<RenderGrid>>,
     state: Res<FloodState>,
     mut commands: Commands,
@@ -110,10 +124,21 @@ struct FloodState {
     paused: bool,
 }
 
-fn flood_controls(mut ctx: ResMut<EguiContext>, mut state: ResMut<FloodState>) {
+fn flood_controls(
+    mut ctx: ResMut<EguiContext>,
+    mut state: ResMut<FloodState>,
+    mut set: ParamSet<(
+        Query<&mut Grid, With<ActiveGrid>>,
+        Query<&Grid, With<OriginalGrid>>,
+    )>,
+) {
     egui::Window::new("Controls").show(ctx.ctx_mut(), |ui| {
         if ui.button("Pause/resume").clicked() {
             state.paused = !state.paused;
+        }
+        if ui.button("Reset").clicked() {
+            *set.p0().single_mut() = set.p1().single().clone();
+            // TODO Re-render immediately, in case we're paused?
         }
     });
 }
