@@ -1,12 +1,13 @@
 use anyhow::Result;
 use bevy::prelude::{
     default, App, Assets, Camera2dBundle, Color, ColorMaterial, Commands, Component,
-    DefaultPlugins, Entity, Input, KeyCode, Mesh, Query, Res, ResMut, SystemSet, With,
+    DefaultPlugins, Entity, Input, KeyCode, Mesh, Query, Res, ResMut, Resource, SystemSet, With,
 };
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy::time::FixedTimestep;
-use bevy_pancam::{PanCam, PanCamPlugin};
+use bevy_egui::{egui, EguiContext};
 use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy_pancam::{PanCam, PanCamPlugin};
 use bevy_prototype_lyon::prelude::ShapePlugin;
 
 use self::cursor_worldspace::CursorWorldspace;
@@ -31,6 +32,8 @@ fn main() -> Result<()> {
         )
         .init_resource::<CursorWorldspace>()
         .add_system(cursor_worldspace::cursor_to_world)
+        .insert_resource(FloodState { paused: false })
+        .add_system(flood_controls)
         .run();
 
     Ok(())
@@ -83,8 +86,13 @@ fn controls(keys: Res<Input<KeyCode>>, cursor: Res<CursorWorldspace>, mut query:
 fn do_flood(
     mut query1: Query<&mut Grid>,
     query2: Query<Entity, With<RenderGrid>>,
+    state: Res<FloodState>,
     mut commands: Commands,
 ) {
+    if state.paused {
+        return;
+    }
+
     let mut grid = query1.single_mut();
     grid.flood();
 
@@ -95,4 +103,17 @@ fn do_flood(
     for bundle in grid.render() {
         commands.spawn((bundle, RenderGrid));
     }
+}
+
+#[derive(Resource)]
+struct FloodState {
+    paused: bool,
+}
+
+fn flood_controls(mut ctx: ResMut<EguiContext>, mut state: ResMut<FloodState>) {
+    egui::Window::new("Controls").show(ctx.ctx_mut(), |ui| {
+        if ui.button("Pause/resume").clicked() {
+            state.paused = !state.paused;
+        }
+    });
 }
