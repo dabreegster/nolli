@@ -202,6 +202,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy-earcutr"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d46460b15e05472aba2c81a9b8bd2c063c1c1c8a10c1d266a36466691196866c"
+dependencies = [
+ "bevy_render",
+ "earcutr",
+]
+
+[[package]]
 name = "bevy_animation"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1288,6 +1298,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9ea835d29036a4087793836fa931b08837ad5e957da9e23886b29586fb9b6650"
 
 [[package]]
+name = "earcutr"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46e5308a83caaa6ba82d78d30a93864294cba51d6c54a4566ff390633b7dde64"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "encase"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2240,6 +2259,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bevy",
+ "bevy-earcutr",
  "bevy_pancam",
  "bevy_prototype_lyon",
  "geo",

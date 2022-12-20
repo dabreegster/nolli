@@ -1,10 +1,8 @@
 use anyhow::Result;
-use bevy::prelude::{Color, Transform, Vec2};
-use bevy_prototype_lyon::entity::ShapeBundle;
-use bevy_prototype_lyon::prelude::{DrawMode, FillMode, GeometryBuilder};
-use bevy_prototype_lyon::shapes;
+use bevy::prelude::Mesh;
+use bevy_earcutr::{EarcutrInput, PolygonMeshBuilder};
 use geo::{
-    BoundingRect, Coord, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point,
+    BoundingRect, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point,
     Polygon, Rect,
 };
 use geojson::GeoJson;
@@ -37,21 +35,17 @@ pub fn load_buildings(path: &str) -> Result<(Vec<Polygon>, Rect)> {
     Ok((polygons, bbox))
 }
 
-pub fn render_polygons(polygons: Vec<Polygon>) -> ShapeBundle {
-    let mut builder = GeometryBuilder::new();
+pub fn polygons_to_mesh(polygons: Vec<Polygon>) -> Mesh {
+    let mut builder = PolygonMeshBuilder::new();
     for geo_polygon in polygons {
-        let bevy_polygon = shapes::Polygon {
-            points: geo_polygon.exterior().coords().map(coord_to_vec2).collect(),
-            closed: true,
-        };
-        builder = builder.add(&bevy_polygon);
+        builder.add_earcutr_input(EarcutrInput {
+            vertices: geo_polygon
+                .exterior()
+                .coords()
+                .flat_map(|c| vec![c.x, c.y])
+                .collect(),
+            interior_indices: vec![],
+        });
     }
-    builder.build(
-        DrawMode::Fill(FillMode::color(Color::hex("601865").unwrap())),
-        Transform::default(),
-    )
-}
-
-fn coord_to_vec2(pt: &Coord) -> Vec2 {
-    Vec2::new(pt.x as f32, pt.y as f32)
+    builder.build().unwrap()
 }

@@ -1,8 +1,9 @@
 use anyhow::Result;
 use bevy::prelude::{
-    App, Camera2dBundle, Commands, Component, DefaultPlugins, Entity, Input, KeyCode, Query, Res,
-    SystemSet, With,
+    default, App, Assets, Camera2dBundle, Color, ColorMaterial, Commands, Component,
+    DefaultPlugins, Entity, Input, KeyCode, Mesh, Query, Res, ResMut, SystemSet, With,
 };
+use bevy::sprite::MaterialMesh2dBundle;
 use bevy::time::FixedTimestep;
 use bevy_pancam::{PanCam, PanCamPlugin};
 use bevy_prototype_lyon::prelude::ShapePlugin;
@@ -37,7 +38,11 @@ fn main() -> Result<()> {
 #[derive(Component)]
 struct RenderGrid;
 
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     let mut args: Vec<String> = std::env::args().collect();
     if args.len() != 2 {
         panic!("Pass a path to a .geojson containing some polygons");
@@ -51,7 +56,13 @@ fn setup(mut commands: Commands) {
         commands.spawn((bundle, RenderGrid));
     }
     commands.spawn(grid);
-    commands.spawn(load_geo::render_polygons(buildings));
+    commands.spawn(MaterialMesh2dBundle {
+        mesh: meshes.add(load_geo::polygons_to_mesh(buildings)).into(),
+        material: materials
+            .add(ColorMaterial::from(Color::hex("601865").unwrap()))
+            .into(),
+        ..default()
+    });
     commands.spawn((Camera2dBundle::default(), PanCam::default()));
 }
 
