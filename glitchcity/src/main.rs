@@ -1,6 +1,6 @@
 use anyhow::Result;
 use bevy::prelude::{
-    default, shape, App, Assets, Camera3dBundle, Color, Commands, DefaultPlugins, Mesh, PbrBundle,
+    default, App, Assets, Camera3dBundle, Color, Commands, DefaultPlugins, Mesh, PbrBundle,
     PointLight, PointLightBundle, ResMut, StandardMaterial, Transform, Vec3,
 };
 use bevy_inspector_egui::WorldInspectorPlugin;
@@ -34,24 +34,21 @@ fn setup(
     }
     let path = args.pop().unwrap();
 
-    let (buildings, _) = load_geo::load_buildings(&path).unwrap();
+    let buildings = load_geo::load_buildings(&path).unwrap();
 
-    /*commands.spawn(MaterialMesh2dBundle {
-        mesh: meshes.add(load_geo::polygons_to_mesh(buildings)).into(),
-        material: materials
-            .add(Color::hex("601865").unwrap())
-            .into(),
-        ..default()
-    });*/
-
-    // cube
     commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb(0.8, 0.7, 0.6).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+        mesh: meshes.add(load_geo::polygons_to_mesh(buildings)).into(),
+        material: materials.add(StandardMaterial {
+            base_color: Color::hex("601865").unwrap(),
+            cull_mode: None,
+            double_sided: true,
+            ..default()
+        }),
+        // They're way too huge otherwise
+        transform: Transform::from_scale(Vec3::splat(0.01)),
         ..default()
     });
-    // light
+
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
@@ -61,7 +58,7 @@ fn setup(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
-    // camera
+
     commands
         .spawn(Camera3dBundle::default())
         .insert(FpsCameraBundle::new(

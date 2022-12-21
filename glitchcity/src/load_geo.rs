@@ -2,13 +2,12 @@ use anyhow::Result;
 use bevy::prelude::Mesh;
 use bevy_earcutr::{EarcutrInput, PolygonMeshBuilder};
 use geo::{
-    BoundingRect, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point,
-    Polygon, Rect,
+    BoundingRect, Geometry, GeometryCollection, HaversineDistance, MapCoordsInPlace, Point, Polygon,
 };
 use geojson::GeoJson;
 
 /// Load polygons from a GeoJSON file and transform to Mercator
-pub fn load_buildings(path: &str) -> Result<(Vec<Polygon>, Rect)> {
+pub fn load_buildings(path: &str) -> Result<Vec<Polygon>> {
     let geojson = std::fs::read_to_string(path)?.parse::<GeoJson>()?;
     let mut collection: GeometryCollection<f64> = geojson::quick_collection(&geojson)?;
 
@@ -24,7 +23,6 @@ pub fn load_buildings(path: &str) -> Result<(Vec<Polygon>, Rect)> {
         let y = Point::new(top_left.x(), c.y).haversine_distance(&top_left);
         (x, y).into()
     });
-    let bbox = collection.bounding_rect().unwrap();
 
     let mut polygons = Vec::new();
     for geom in collection {
@@ -32,7 +30,7 @@ pub fn load_buildings(path: &str) -> Result<(Vec<Polygon>, Rect)> {
             polygons.push(polygon);
         }
     }
-    Ok((polygons, bbox))
+    Ok(polygons)
 }
 
 pub fn polygons_to_mesh(polygons: Vec<Polygon>) -> Mesh {
@@ -47,5 +45,10 @@ pub fn polygons_to_mesh(polygons: Vec<Polygon>) -> Mesh {
             interior_indices: vec![],
         });
     }
-    builder.build().unwrap()
+    let mut mesh = builder.build().unwrap();
+
+    let normals = vec![[0.0, 0.0, 1.0]; mesh.count_vertices()];
+    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+
+    mesh
 }
