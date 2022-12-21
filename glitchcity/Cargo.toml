@@ -1,0 +1,14 @@
+[package]
+name = "glitchcity"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.66"
+bevy = { version = "0.9.1", features = ["dynamic"] }
+bevy-earcutr = "0.7.0"
+bevy-inspector-egui = "0.15.0"
+bevy_egui = "0.18.0"
+bevy_pancam = { version = "0.7.0", features = ["bevy_egui"] }
+geo = "0.23.1"
+geojson = { version = "*", features = ["geo-types"] }

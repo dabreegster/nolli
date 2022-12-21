@@ -1811,6 +1811,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "glitchcity"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bevy",
+ "bevy-earcutr",
+ "bevy-inspector-egui",
+ "bevy_egui 0.18.0",
+ "bevy_pancam",
+ "geo",
+ "geojson",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
