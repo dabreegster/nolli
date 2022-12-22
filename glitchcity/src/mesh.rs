@@ -61,6 +61,27 @@ impl MeshBuilder {
         self.indices.extend([i1, i2, i3]);
     }
 
+    pub fn add_quad(&mut self, positions: [Vec3; 4], normal: Vec3) {
+        let c1 = self.add_vertex(Vertex {
+            pos: positions[0],
+            normal,
+        });
+        let c2 = self.add_vertex(Vertex {
+            pos: positions[1],
+            normal,
+        });
+        let c3 = self.add_vertex(Vertex {
+            pos: positions[2],
+            normal,
+        });
+        let c4 = self.add_vertex(Vertex {
+            pos: positions[3],
+            normal,
+        });
+        self.add_triangle(c1, c2, c3);
+        self.add_triangle(c3, c4, c1);
+    }
+
     // Adds a polygon in the XZ plane
     pub fn triangulate_polygon(&mut self, polygon: &Polygon, y: f32, normal: Vec3) {
         let mut builder = PolygonMeshBuilder::new();
