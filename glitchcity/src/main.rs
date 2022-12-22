@@ -9,7 +9,8 @@ use smooth_bevy_cameras::{
     LookTransformPlugin,
 };
 
-mod load_geo;
+mod buildings;
+mod mesh;
 
 fn main() -> Result<()> {
     App::new()
@@ -34,10 +35,13 @@ fn setup(
     }
     let path = args.pop().unwrap();
 
-    let buildings = load_geo::load_buildings(&path).unwrap();
+    let mut builder = mesh::MeshBuilder::new();
+    for polygon in mesh::load_polygons(&path).unwrap() {
+        buildings::extrude(polygon, 500.0, &mut builder);
+    }
 
     commands.spawn(PbrBundle {
-        mesh: meshes.add(load_geo::polygons_to_mesh(buildings)).into(),
+        mesh: meshes.add(builder.build()).into(),
         material: materials.add(StandardMaterial {
             base_color: Color::hex("601865").unwrap(),
             cull_mode: None,
