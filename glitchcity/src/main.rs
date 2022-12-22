@@ -4,10 +4,13 @@ use bevy::prelude::{
     PointLight, PointLightBundle, ResMut, StandardMaterial, Transform, Vec3,
 };
 use bevy_inspector_egui::WorldInspectorPlugin;
+use bevy_tweening::lens::TransformScaleLens;
+use bevy_tweening::{Animator, EaseFunction, RepeatCount, RepeatStrategy, Tween, TweeningPlugin};
 use smooth_bevy_cameras::{
     controllers::fps::{FpsCameraBundle, FpsCameraController, FpsCameraPlugin},
     LookTransformPlugin,
 };
+use std::time::Duration;
 
 mod buildings;
 mod mesh;
@@ -18,6 +21,7 @@ fn main() -> Result<()> {
         .add_plugin(LookTransformPlugin)
         .add_plugin(FpsCameraPlugin::default())
         .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(TweeningPlugin)
         .add_startup_system(setup)
         .run();
 
@@ -40,18 +44,30 @@ fn setup(
         buildings::extrude(polygon, 500.0, &mut builder);
     }
 
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(builder.build()).into(),
-        material: materials.add(StandardMaterial {
-            base_color: Color::hex("601865").unwrap(),
-            cull_mode: None,
-            double_sided: true,
+    commands.spawn((
+        PbrBundle {
+            mesh: meshes.add(builder.build()).into(),
+            material: materials.add(StandardMaterial {
+                base_color: Color::hex("601865").unwrap(),
+                cull_mode: None,
+                double_sided: true,
+                ..default()
+            }),
             ..default()
-        }),
-        // They're way too huge otherwise
-        transform: Transform::from_scale(Vec3::splat(0.01)),
-        ..default()
-    });
+        },
+        Animator::new(
+            Tween::new(
+                EaseFunction::QuadraticInOut,
+                Duration::from_secs(2),
+                TransformScaleLens {
+                    start: Vec3::new(0.01, 0.01, 0.01),
+                    end: Vec3::new(0.01, 0.04, 0.01),
+                },
+            )
+            .with_repeat_count(RepeatCount::Infinite)
+            .with_repeat_strategy(RepeatStrategy::MirroredRepeat),
+        ),
+    ));
 
     commands.spawn(PointLightBundle {
         point_light: PointLight {

@@ -9,6 +9,7 @@ bevy = { version = "0.9.1", features = ["dynamic"] }
 bevy-earcutr = "0.7.0"
 bevy-inspector-egui = "0.15.0"
 bevy_egui = "0.18.0"
+bevy_tweening = "0.6.0"
 geo = "0.23.1"
 geojson = { version = "*", features = ["geo-types"] }
 smooth-bevy-cameras = "0.6.0"
