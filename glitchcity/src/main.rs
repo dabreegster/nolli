@@ -87,8 +87,8 @@ fn setup(
                 ..default()
             },
             // eye
-            Vec3::new(-2.0, 5.0, 5.0),
+            Vec3::new(-20.0, 35.0, 5.0),
             // target
-            Vec3::new(0., 0., 0.),
+            Vec3::splat(0.0),
         ));
 }
