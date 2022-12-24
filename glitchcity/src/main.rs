@@ -6,6 +6,8 @@ use bevy::prelude::{
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_tweening::lens::TransformScaleLens;
 use bevy_tweening::{Animator, EaseFunction, RepeatCount, RepeatStrategy, Tween, TweeningPlugin};
+use rand::Rng;
+use random_color::RandomColor;
 use smooth_bevy_cameras::{
     controllers::fps::{FpsCameraBundle, FpsCameraController, FpsCameraPlugin},
     LookTransformPlugin,
@@ -39,35 +41,37 @@ fn setup(
     }
     let path = args.pop().unwrap();
 
-    let mut builder = mesh::MeshBuilder::new();
-    for polygon in mesh::load_polygons(&path).unwrap() {
-        buildings::extrude(polygon, 500.0, &mut builder);
-    }
+    let mut rng = rand::thread_rng();
 
-    commands.spawn((
-        PbrBundle {
-            mesh: meshes.add(builder.build()).into(),
-            material: materials.add(StandardMaterial {
-                base_color: Color::hex("601865").unwrap(),
-                cull_mode: None,
-                double_sided: true,
+    for polygon in mesh::load_polygons(&path).unwrap() {
+        let mut builder = mesh::MeshBuilder::new();
+        let height = rng.gen_range(200.0..500.0);
+        buildings::extrude(polygon, height, &mut builder);
+        commands.spawn((
+            PbrBundle {
+                mesh: meshes.add(builder.build()).into(),
+                material: materials.add(StandardMaterial {
+                    base_color: bevy_color(RandomColor::new().hue(random_color::Color::Blue)),
+                    cull_mode: None,
+                    double_sided: true,
+                    ..default()
+                }),
                 ..default()
-            }),
-            ..default()
-        },
-        Animator::new(
-            Tween::new(
-                EaseFunction::QuadraticInOut,
-                Duration::from_secs(2),
-                TransformScaleLens {
-                    start: Vec3::new(0.01, 0.01, 0.01),
-                    end: Vec3::new(0.01, 0.04, 0.01),
-                },
-            )
-            .with_repeat_count(RepeatCount::Infinite)
-            .with_repeat_strategy(RepeatStrategy::MirroredRepeat),
-        ),
-    ));
+            },
+            Animator::new(
+                Tween::new(
+                    EaseFunction::QuadraticInOut,
+                    Duration::from_secs(2),
+                    TransformScaleLens {
+                        start: Vec3::new(0.01, 0.01, 0.01),
+                        end: Vec3::new(0.01, 0.04, 0.01),
+                    },
+                )
+                .with_repeat_count(RepeatCount::Infinite)
+                .with_repeat_strategy(RepeatStrategy::MirroredRepeat),
+            ),
+        ));
+    }
 
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -91,4 +95,9 @@ fn setup(
             // target
             Vec3::splat(0.0),
         ));
+}
+
+fn bevy_color(c: &mut RandomColor) -> Color {
+    let [r, g, b] = c.to_rgb_array();
+    Color::rgb_u8(r, g, b)
 }

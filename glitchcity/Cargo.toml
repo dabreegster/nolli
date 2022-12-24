@@ -12,4 +12,6 @@ bevy_egui = "0.18.0"
 bevy_tweening = "0.6.0"
 geo = "0.23.1"
 geojson = { version = "*", features = ["geo-types"] }
+rand = "0.8.5"
+random_color = "0.6.1"
 smooth-bevy-cameras = "0.6.0"
