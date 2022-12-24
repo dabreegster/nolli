@@ -1,7 +1,8 @@
 use anyhow::Result;
 use bevy::prelude::{
-    default, App, Assets, Camera3dBundle, Color, Commands, DefaultPlugins, Mesh, PbrBundle,
-    PointLight, PointLightBundle, Quat, Query, ResMut, StandardMaterial, Transform, Vec3,
+    default, App, Assets, Camera3dBundle, Color, Commands, DefaultPlugins, EventWriter, Input,
+    KeyCode, Mesh, PbrBundle, PointLight, PointLightBundle, Quat, Query, Res, ResMut,
+    StandardMaterial, Transform, Vec2, Vec3,
 };
 use bevy_egui::{egui, EguiContext};
 use bevy_inspector_egui::WorldInspectorPlugin;
@@ -13,7 +14,7 @@ use bevy_tweening::{
 use rand::Rng;
 use random_color::RandomColor;
 use smooth_bevy_cameras::{
-    controllers::fps::{FpsCameraBundle, FpsCameraController, FpsCameraPlugin},
+    controllers::fps::{ControlEvent, FpsCameraBundle, FpsCameraController, FpsCameraPlugin},
     LookTransformPlugin,
 };
 use std::time::Duration;
@@ -25,11 +26,12 @@ fn main() -> Result<()> {
     App::new()
         .add_plugins(DefaultPlugins)
         .add_plugin(LookTransformPlugin)
-        .add_plugin(FpsCameraPlugin::default())
+        .add_plugin(FpsCameraPlugin::new(true))
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(TweeningPlugin)
         .add_startup_system(setup)
-        .add_system(controls)
+        .add_system(gui_controls)
+        .add_system(camera_controls)
         .run();
 
     Ok(())
@@ -105,7 +107,7 @@ fn setup(
         .spawn(Camera3dBundle::default())
         .insert(FpsCameraBundle::new(
             FpsCameraController {
-                translate_sensitivity: 15.0,
+                smoothing_weight: 0.0,
                 ..default()
             },
             // eye
@@ -120,10 +122,16 @@ fn bevy_color(c: &mut RandomColor) -> Color {
     Color::rgb_u8(r, g, b)
 }
 
-fn controls(mut ctx: ResMut<EguiContext>, mut query: Query<&mut Animator<Transform>>) {
+fn gui_controls(
+    mut ctx: ResMut<EguiContext>,
+    mut query: Query<&mut Animator<Transform>>,
+    keyboard: Res<Input<KeyCode>>,
+) {
     egui::Window::new("Controls").show(ctx.ctx_mut(), |ui| {
         // TODO This probably stops both
-        if ui.button("Pause/resume height scaling").clicked() {
+        if ui.button("Pause/resume height scaling").clicked()
+            || keyboard.just_pressed(KeyCode::Space)
+        {
             for mut x in &mut query {
                 if x.state == AnimatorState::Playing {
                     x.stop();
@@ -133,4 +141,32 @@ fn controls(mut ctx: ResMut<EguiContext>, mut query: Query<&mut Animator<Transfo
             }
         }
     });
+}
+
+fn camera_controls(mut events: EventWriter<ControlEvent>, keyboard: Res<Input<KeyCode>>) {
+    let translate_speed = 15.0;
+    let rotate_speed = 2.0;
+
+    if keyboard.pressed(KeyCode::Up) {
+        events.send(ControlEvent::TranslateEye(translate_speed * Vec3::Z));
+    }
+    if keyboard.pressed(KeyCode::Down) {
+        events.send(ControlEvent::TranslateEye(translate_speed * -Vec3::Z));
+    }
+
+    let translate = keyboard.pressed(KeyCode::LShift);
+    for (key, translate_dir, rotate_dir) in [
+        (KeyCode::Left, Vec3::X, -Vec2::X),
+        (KeyCode::Right, -Vec3::X, Vec2::X),
+        (KeyCode::A, -Vec3::Y, Vec2::Y),
+        (KeyCode::Q, Vec3::Y, -Vec2::Y),
+    ] {
+        if keyboard.pressed(key) {
+            if translate {
+                events.send(ControlEvent::TranslateEye(translate_speed * translate_dir));
+            } else {
+                events.send(ControlEvent::Rotate(rotate_speed * rotate_dir));
+            }
+        }
+    }
 }
