@@ -1,13 +1,14 @@
 use anyhow::Result;
 use bevy::prelude::{
     default, App, Assets, Camera3dBundle, Color, Commands, DefaultPlugins, Mesh, PbrBundle,
-    PointLight, PointLightBundle, Query, ResMut, StandardMaterial, Transform, Vec3,
+    PointLight, PointLightBundle, Quat, Query, ResMut, StandardMaterial, Transform, Vec3,
 };
 use bevy_egui::{egui, EguiContext};
 use bevy_inspector_egui::WorldInspectorPlugin;
-use bevy_tweening::lens::TransformScaleLens;
+use bevy_tweening::lens::{TransformRotationLens, TransformScaleLens};
 use bevy_tweening::{
-    Animator, AnimatorState, EaseFunction, RepeatCount, RepeatStrategy, Tween, TweeningPlugin,
+    Animator, AnimatorState, EaseFunction, RepeatCount, RepeatStrategy, Tracks, Tween,
+    TweeningPlugin,
 };
 use rand::Rng;
 use random_color::RandomColor;
@@ -51,6 +52,30 @@ fn setup(
         let mut builder = mesh::MeshBuilder::new();
         let height = rng.gen_range(200.0..500.0);
         buildings::extrude(polygon, height, &mut builder);
+
+        let scale_height = Tween::new(
+            EaseFunction::QuadraticInOut,
+            Duration::from_secs(2),
+            TransformScaleLens {
+                start: Vec3::new(0.01, 0.01, 0.01),
+                end: Vec3::new(0.01, 0.04, 0.01),
+            },
+        )
+        .with_repeat_count(RepeatCount::Infinite)
+        .with_repeat_strategy(RepeatStrategy::MirroredRepeat);
+
+        // TODO Need to express the spin around the polygon's center, oops
+        let spin = Tween::new(
+            EaseFunction::QuadraticInOut,
+            Duration::from_secs(5),
+            TransformRotationLens {
+                start: Quat::IDENTITY,
+                end: Quat::from_rotation_y(180_f32.to_radians()),
+            },
+        )
+        .with_repeat_count(RepeatCount::Infinite)
+        .with_repeat_strategy(RepeatStrategy::MirroredRepeat);
+
         commands.spawn((
             PbrBundle {
                 mesh: meshes.add(builder.build()).into(),
@@ -62,18 +87,7 @@ fn setup(
                 }),
                 ..default()
             },
-            Animator::new(
-                Tween::new(
-                    EaseFunction::QuadraticInOut,
-                    Duration::from_secs(2),
-                    TransformScaleLens {
-                        start: Vec3::new(0.01, 0.01, 0.01),
-                        end: Vec3::new(0.01, 0.04, 0.01),
-                    },
-                )
-                .with_repeat_count(RepeatCount::Infinite)
-                .with_repeat_strategy(RepeatStrategy::MirroredRepeat),
-            ),
+            Animator::new(Tracks::new([scale_height, spin])),
         ));
     }
 
@@ -108,6 +122,7 @@ fn bevy_color(c: &mut RandomColor) -> Color {
 
 fn controls(mut ctx: ResMut<EguiContext>, mut query: Query<&mut Animator<Transform>>) {
     egui::Window::new("Controls").show(ctx.ctx_mut(), |ui| {
+        // TODO This probably stops both
         if ui.button("Pause/resume height scaling").clicked() {
             for mut x in &mut query {
                 if x.state == AnimatorState::Playing {
