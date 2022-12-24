@@ -1,11 +1,14 @@
 use anyhow::Result;
 use bevy::prelude::{
     default, App, Assets, Camera3dBundle, Color, Commands, DefaultPlugins, Mesh, PbrBundle,
-    PointLight, PointLightBundle, ResMut, StandardMaterial, Transform, Vec3,
+    PointLight, PointLightBundle, Query, ResMut, StandardMaterial, Transform, Vec3,
 };
+use bevy_egui::{egui, EguiContext};
 use bevy_inspector_egui::WorldInspectorPlugin;
 use bevy_tweening::lens::TransformScaleLens;
-use bevy_tweening::{Animator, EaseFunction, RepeatCount, RepeatStrategy, Tween, TweeningPlugin};
+use bevy_tweening::{
+    Animator, AnimatorState, EaseFunction, RepeatCount, RepeatStrategy, Tween, TweeningPlugin,
+};
 use rand::Rng;
 use random_color::RandomColor;
 use smooth_bevy_cameras::{
@@ -25,6 +28,7 @@ fn main() -> Result<()> {
         .add_plugin(WorldInspectorPlugin::new())
         .add_plugin(TweeningPlugin)
         .add_startup_system(setup)
+        .add_system(controls)
         .run();
 
     Ok(())
@@ -100,4 +104,18 @@ fn setup(
 fn bevy_color(c: &mut RandomColor) -> Color {
     let [r, g, b] = c.to_rgb_array();
     Color::rgb_u8(r, g, b)
+}
+
+fn controls(mut ctx: ResMut<EguiContext>, mut query: Query<&mut Animator<Transform>>) {
+    egui::Window::new("Controls").show(ctx.ctx_mut(), |ui| {
+        if ui.button("Pause/resume height scaling").clicked() {
+            for mut x in &mut query {
+                if x.state == AnimatorState::Playing {
+                    x.stop();
+                } else {
+                    x.state = AnimatorState::Playing;
+                }
+            }
+        }
+    });
 }
